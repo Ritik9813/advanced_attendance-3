@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: attendance_db
+      POSTGRES_USER: attendance_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your environment}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U attendance_user -d attendance_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  web:
+    build: .
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in your environment}
+      DATABASE_URL: postgresql+psycopg://attendance_user:${POSTGRES_PASSWORD}@db:5432/attendance_db
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?Set BOOTSTRAP_ADMIN_PASSWORD in your environment}
+      FACE_MATCH_THRESHOLD: ${FACE_MATCH_THRESHOLD:-0.42}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+    ports:
+      - "127.0.0.1:5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./models:/srv/attendai/models:ro
+volumes:
+  postgres_data:
